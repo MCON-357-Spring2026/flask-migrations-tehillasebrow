@@ -23,11 +23,16 @@ class Assignment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False, unique=True)
     max_points = db.Column(db.Integer, nullable=False)
-
+    due_date = db.Column(db.Date, nullable=True)
     grades = db.relationship("Grade", back_populates="assignment", cascade="all, delete-orphan")
 
     def to_dict(self) -> dict:
-        return {"id": self.id, "title": self.title, "max_points": self.max_points}
+        return {
+            "id": self.id,
+            "title": self.title,
+            "max_points": self.max_points,
+            "due_date": self.due_date.isoformat() if self.due_date else None
+        }
 
 
 class Grade(db.Model):
@@ -40,7 +45,7 @@ class Grade(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     score = db.Column(db.Integer, nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-
+    comment = db.Column(db.String(200), nullable=True)
     student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
     assignment_id = db.Column(db.Integer, db.ForeignKey("assignments.id"), nullable=False)
 
@@ -54,5 +59,5 @@ class Grade(db.Model):
             "created_at": self.created_at.isoformat(),
             "student_id": self.student_id,
             "assignment_id": self.assignment_id,
+            "comment": self.comment
         }
-

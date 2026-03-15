@@ -271,8 +271,12 @@ Reflection questions
 
 Answer these in your own words.
 - Why is changing the SQLAlchemy model not enough by itself?
+SQLAlchemy models are just python code. You have to make sql commands to change the database.
 - What is the purpose of the migrations/ folder?
+- it acts as a version control system for the database schema. it keeps a chronological history of evry change made to the database to allow developers to upgrade or downgrade their database states safely and consistently.
 - Why is db upgrade safer than deleting and recreating the database?
+- deleting and recreating a database destroys all the user data inside of it. dp upgrade modifies the structure of the tables while keeping all the existing rows and data perfectly intact.
 - Why do date columns usually need conversion before being returned in JSON?
-
+json doesnt support a date data type so it needs to be converted to a string before being transmitted as json
 What could go wrong if a production database already contains real data?
+if you add a new column and set it to nullable-False, the database will reject the migration. You either have to make a new column or provide a default value to the existing rows.

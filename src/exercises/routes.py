@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import IntegrityError
 
@@ -9,11 +10,9 @@ from . import exercises as ex
 
 api = Blueprint("api", __name__)
 
-
 @api.get("/health")
 def health():
     return {"status": "ok"}
-
 
 # ---------------------------
 # Students
@@ -82,6 +81,14 @@ def create_assignment():
     data = request.get_json() or {}
     title = data.get("title")
     max_points = data.get("max_points")
+    due_date_str = data.get("due_date")
+
+    parsed_date = None
+    if due_date_str:
+        try:
+            parsed_date = date.fromisoformat(due_date_str)
+        except ValueError:
+            return {"error": "Invalid date format. Use YYYY-MM-DD"}, 400
 
     if not title or max_points is None:
         return {"error": "title and max_points are required"}, 400
@@ -94,7 +101,7 @@ def create_assignment():
     if max_points_int <= 0:
         return {"error": "max_points must be > 0"}, 400
 
-    a = Assignment(title=title, max_points=max_points_int)
+    a = Assignment(title=title, max_points=max_points_int, due_date=parsed_date)
     db.session.add(a)
     try:
         db.session.commit()
@@ -138,6 +145,7 @@ def create_grade():
     student_id = data.get("student_id")
     assignment_id = data.get("assignment_id")
     score = data.get("score")
+    comment = data.get("comment")
 
     if student_id is None or assignment_id is None or score is None:
         return {"error": "student_id, assignment_id, and score are required"}, 400
@@ -151,12 +159,15 @@ def create_grade():
         return {"error": "score must be >= 0"}, 400
 
     try:
-        g = ex.add_grade(student_id, assignment_id, score_int)
+        g = ex.add_grade(student_id, assignment_id, score_int, comment=comment)
         return g.to_dict(), 201
     except LookupError as e:
         return {"error": str(e)}, 404
     except ValueError as e:
         return {"error": str(e)}, 409
+    except TypeError:
+        # Catching TypeError just in case exercises.add_grade hasn't been updated
+        return {"error": "Server configuration error. Check if add_grade accepts comment parameter."}, 500
 
 
 @api.get("/grades")
@@ -258,4 +269,3 @@ def top_students(threshold: float):
 def assignments_no_grades():
     assignments = ex.assignments_without_grades()
     return {"assignments": [a.to_dict() for a in assignments]}, 200
-
