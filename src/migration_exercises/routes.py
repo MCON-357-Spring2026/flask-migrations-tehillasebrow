@@ -1,3 +1,4 @@
+from datetime import date
 from flask import Blueprint, jsonify, request
 from .extensions import db
 from .models import Student, Assignment, Grade
@@ -59,10 +60,22 @@ def create_assignment():
     title = data.get("title")
     max_score = data.get("max_score")
 
+    # Grab the due date string
+    due_date_str = data.get("due_date")
+
     if not title or max_score is None:
         return jsonify({"error": "title and max_score are required"}), 400
 
-    assignment = Assignment(title=title, max_score=max_score)
+    # Validate and parse the date to satisfy test_post_assignment_invalid_due_date_rejected
+    parsed_date = None
+    if due_date_str:
+        try:
+            parsed_date = date.fromisoformat(due_date_str)
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+
+    # Add due_date to the Assignment creation
+    assignment = Assignment(title=title, max_score=max_score, due_date=parsed_date)
     db.session.add(assignment)
     db.session.commit()
     return jsonify(assignment.to_dict()), 201
@@ -82,18 +95,23 @@ def create_grade():
     student_id = data.get("student_id")
     assignment_id = data.get("assignment_id")
 
+    # Grab the comment string
+    comment = data.get("comment")
+
     if score is None or student_id is None or assignment_id is None:
         return jsonify({"error": "score, student_id, and assignment_id are required"}), 400
 
-    student = Student.query.get(student_id)
-    assignment = Assignment.query.get(assignment_id)
+    # Using db.session.get to fix the deprecation warnings in your Pytest output!
+    student = db.session.get(Student, student_id)
+    assignment = db.session.get(Assignment, assignment_id)
 
     if student is None:
         return jsonify({"error": "student not found"}), 404
     if assignment is None:
         return jsonify({"error": "assignment not found"}), 404
 
-    grade = Grade(score=score, student_id=student_id, assignment_id=assignment_id)
+    # Add comment to the Grade creation
+    grade = Grade(score=score, student_id=student_id, assignment_id=assignment_id, comment=comment)
     db.session.add(grade)
     db.session.commit()
     return jsonify(grade.to_dict()), 201

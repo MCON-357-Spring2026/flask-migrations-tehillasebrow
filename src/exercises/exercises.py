@@ -38,7 +38,7 @@ def find_student_by_email(email: str) -> Optional[Student]:
     return Student.query.filter_by(email=email).first()
 
 
-def add_grade(student_id: int, assignment_id: int, score: int) -> Grade:
+def add_grade(student_id: int, assignment_id: int, score: int, comment: Optional[str] = None) -> Grade:
     """TODO: Add a Grade for the student+assignment and commit.
 
     If student doesn't exist: raise LookupError
@@ -47,20 +47,23 @@ def add_grade(student_id: int, assignment_id: int, score: int) -> Grade:
     """
     student = db.session.get(Student, student_id)
     if not student:
-        raise LookupError
+        raise LookupError("student not found")
+
     assignment = db.session.get(Assignment, assignment_id)
     if not assignment:
-        raise LookupError
+        raise LookupError("assignment not found")
 
-    g = Grade(score=score, student=student, assignment=assignment)
+    # Include the comment when creating the Grade
+    g = Grade(score=score, student=student, assignment=assignment, comment=comment)
     db.session.add(g)
+
     try:
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
         raise ValueError("duplicate grade")
-    return g
 
+    return g
 
 def average_percent(student_id: int) -> float:
     """TODO: Return student's average percent across assignments.
